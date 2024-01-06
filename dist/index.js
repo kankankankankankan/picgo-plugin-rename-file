@@ -1,9 +1,11 @@
 "use strict";
 const path = require('path');
 const crypto = require('crypto');
+
 function sleep(time) {
     return new Promise((resolve) => setTimeout(resolve, time));
 }
+
 const pluginConfig = ctx => {
     let userConfig = ctx.getConfig('picgo-plugin-rename-file');
     if (!userConfig) {
@@ -20,11 +22,11 @@ const pluginConfig = ctx => {
         }
     ];
 };
+
 module.exports = (ctx) => {
     const register = () => {
         ctx.helper.beforeUploadPlugins.register('rename-file', {
             handle: async function (ctx) {
-                // console.log(ctx)
                 const autoRename = ctx.getConfig('settings.autoRename');
                 if (autoRename) {
                     ctx.emit('notification', {
@@ -53,41 +55,45 @@ module.exports = (ctx) => {
                         fileName = format.trim()
                             // 替换日期
                             .replace(/{(y|m|d|h|i|s|ms|timestamp)}/gi, (result, key) => {
-                            return (typeof formatObject[key] === 'number' && formatObject[key] < 10 ? '0' : '') + formatObject[key];
-                        })
+                                return (typeof formatObject[key] === 'number' && formatObject[key] < 10 ? '0' : '') + formatObject[key];
+                            })
                             // 截取本地目录
                             .replace(/{(localFolder:?(\d+)?)}/gi, (result, key, count) => {
-                            if (ctx.input[i]) {
-                                count = Math.max(1, (count || 0));
-                                let paths = path.dirname(ctx.input[i]).split(path.sep);
-                                key = paths.slice(0 - count).reduce((a, b) => `${a}/${b}`);
-                            }
-                            return key.replace(/:/g, '');
-                        })
+                                if (ctx.input[i]) {
+                                    count = Math.max(1, (count || 0));
+                                    let paths = path.dirname(ctx.input[i]).split(path.sep);
+                                    key = paths.slice(0 - count).reduce((a, b) => `${a}/${b}`);
+                                }
+                                return key.replace(/:/g, '');
+                            })
                             // 随机字符串
                             .replace(/{(rand:?(\d+)?)}/gi, (result, key, count) => {
-                            if (key === 'rand' || key.indexOf('rand:') === 0) {
-                                count = Math.min(Math.max(1, (count || 6)), 32);
-                                return crypto.randomBytes(Math.ceil(count / 2)).toString('hex').slice(0, count);
-                            }
-                        })
+                                if (key === 'rand' || key.indexOf('rand:') === 0) {
+                                    count = Math.min(Math.max(1, (count || 6)), 32);
+                                    return crypto.randomBytes(Math.ceil(count / 2)).toString('hex').slice(0, count);
+                                }
+                            })
                             // 字符串替换
                             .replace(/{(hash|origin|\w+)}/gi, (result, key) => {
-                            // 文件原名
-                            if (key === 'origin') {
-                                return fileName.substring(0, Math.max(0, fileName.lastIndexOf('.')) || fileName.length)
-                                    .replace(/[\\\/:<>|"'*?$#&@()\[\]^~]+/g, '-');
-                            }
-                            // 文件hash值
-                            if (key === 'hash') {
-                                const hash = crypto.createHash('md5');
-                                hash.update(item.buffer);
-                                return hash.digest('hex');
-                            }
-                            return key;
-                        })
+                                // 文件原名
+                                if (key === 'origin') {
+                                    return fileName.substring(0, Math.max(0, fileName.lastIndexOf('.')) || fileName.length)
+                                        .replace(/[\\\/:<>|"'*?$#&@()\[\]^~]+/g, '-');
+                                }
+                                // 文件hash值
+                                if (key === 'hash') {
+                                    const hash = crypto.createHash('md5');
+                                    hash.update(item.buffer);
+                                    return hash.digest('hex');
+                                }
+                                return key;
+                            })
                             // 去除多余的"/"
                             .replace(/[\/]+/g, '/');
+                            
+                        // 解码URL编码的斜杠
+                        fileName = decodeURIComponent(fileName);
+
                         if (fileName.slice(-1) === '/') {
                             fileName += i;
                         }
@@ -100,6 +106,7 @@ module.exports = (ctx) => {
             config: pluginConfig
         });
     };
+
     return {
         register,
         config: pluginConfig
